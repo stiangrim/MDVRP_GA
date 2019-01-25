@@ -1,0 +1,24 @@
+import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+
+/**
+ * Created by stgr99 on 22/01/2019.
+ */
+public class Server extends Application {
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    @Override
+    public void start(Stage primaryStage) throws Exception {
+        Parent root = FXMLLoader.load(getClass().getResource("resources/view/gui.fxml"));
+        primaryStage.setTitle("Genetic Algorithm");
+        primaryStage.setScene(new Scene(root, 700, 335));
+        primaryStage.show();
+    }
+
+}

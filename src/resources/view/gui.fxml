@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.Pane?>
+
+<AnchorPane prefHeight="335.0" prefWidth="700.0" xmlns="http://javafx.com/javafx/9" xmlns:fx="http://javafx.com/fxml/1" fx:controller="MainController">
+   <children>
+      <Pane prefHeight="335.0" prefWidth="335.0" style="-fx-background-color: lightgrey;">
+         <children>
+            <Canvas fx:id="canvas" height="325.0" layoutX="5.0" layoutY="5.0" onMouseClicked="#canvasClicked" width="325.0" />
+         </children>
+      </Pane>
+      <ChoiceBox fx:id="choiceBox" layoutX="350.0" layoutY="8.0" prefHeight="27.0" prefWidth="274.0" />
+      <Button layoutX="638.0" layoutY="8.0" mnemonicParsing="false" onAction="#startAlgorithm" style="-fx-background-color: #228B22#228B22; -fx-border-color: #000000#000000;" text="Start" textFill="WHITE" />
+   </children>
+</AnchorPane>
