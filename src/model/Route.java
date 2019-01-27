@@ -1,8 +1,5 @@
 package model;
 
-import model.Customer;
-import model.Depot;
-
 import java.util.ArrayList;
 
 /**

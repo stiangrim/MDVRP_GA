@@ -6,9 +6,12 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
-import javafx.scene.input.MouseEvent;
+import javafx.animation.AnimationTimer;
+import javafx.scene.control.TextField;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
 import model.Customer;
 import model.Depot;
 import model.Route;
@@ -16,31 +19,63 @@ import util.FileHandler;
 import util.Util;
 
 import java.util.ArrayList;
-import java.util.Random;
 
 /**
  * Created by stgr99 on 22/01/2019.
  */
 public class MainController {
+
+    @FXML
+    public Button startButton;
+
     @FXML
     public Canvas canvas;
 
     @FXML
     public ChoiceBox<String> choiceBox;
 
-    private FileHandler fileHandler;
+    @FXML
+    public TextField populationSizeField;
 
+    @FXML
+    public TextField mutationRateField;
+
+    @FXML
+    public Text fitnessText;
+
+    @FXML
+    public Text generationsText;
+
+    private AnimationTimer animationTimer;
+    private FileHandler fileHandler;
     private ArrayList<Customer> customers;
     private ArrayList<Depot> depots;
     private double multiplier = 1.0;
     private int drawWidth = 5;
-    private Random random;
+    private int populationSize = 100;
+    private double mutationRate = 0.01;
+    private boolean algorithmRunning = false;
 
     @FXML
     public void initialize() {
         fileHandler = new FileHandler();
-        random = new Random();
+        setFXMLVariables();
         setProblems();
+    }
+
+    private void setFXMLVariables() {
+        populationSizeField.setPromptText(Integer.toString(populationSize));
+        populationSizeField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.equals("")) {
+                populationSize = Integer.parseInt(newValue);
+            }
+        });
+        mutationRateField.setPromptText(Double.toString(mutationRate));
+        mutationRateField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.equals("")) {
+                mutationRate = Double.parseDouble(newValue);
+            }
+        });
     }
 
     private void setProblems() {
@@ -155,7 +190,7 @@ public class MainController {
             for (Route route : routes) {
                 ArrayList<Customer> customers = route.getCustomers();
 
-                gc.setStroke(getRandomColor(colorNumber++));
+                gc.setStroke(Util.getRandomColor(colorNumber++));
 
                 // Render a line from start depot to first customer
                 gc.strokeLine(
@@ -215,40 +250,53 @@ public class MainController {
         }
     }
 
-    public void canvasClicked(MouseEvent mouseEvent) {
-        canvas.getGraphicsContext2D().scale(1.2, 1.2);
-
-        System.out.println(mouseEvent.getX());
-        System.out.println(mouseEvent.getY());
-    }
-
-    private Color getRandomColor(int colorNumber) {
-        Color[] colors = {
-                Color.GREEN, Color.YELLOW, Color.RED, Color.HOTPINK, Color.DARKORANGE, Color.YELLOWGREEN,
-                Color.SADDLEBROWN, Color.PURPLE, Color.DEEPPINK, Color.DARKOLIVEGREEN, Color.DARKSEAGREEN,
-                Color.DARKRED, Color.INDIANRED, Color.MEDIUMVIOLETRED, Color.ORANGERED, Color.PALEVIOLETRED,
-                Color.BROWN, Color.PINK, Color.ORANGE, Color.MEDIUMPURPLE};
-
-        if (colorNumber > colors.length) {
-            return Color.color(random.nextFloat(), random.nextFloat(), random.nextFloat());
+    private void changeStartButton() {
+        if (algorithmRunning) {
+            startButton.setText("Stop");
+            startButton.setStyle("-fx-background-color: red;");
         } else {
-            return colors[colorNumber];
+            startButton.setText("Start");
+            startButton.setStyle("-fx-background-color: green;");
         }
     }
 
     public void startAlgorithm() {
+        algorithmRunning = !algorithmRunning;
+        changeStartButton();
+        if (!algorithmRunning) {
+            animationTimer.stop();
+            return;
+        }
+
         ProblemDTO problemDTO = new ProblemDTO(customers, depots);
-        Population population = new Population(problemDTO, 100, 0.01);
+        Population population = new Population(problemDTO, populationSize, mutationRate);
 
         population.setPopulation();
         population.calculateFitness();
 
-        DNA bestDNA = population.getBestDNA(population.getPopulation());
-        System.out.println("Best fitness: " + bestDNA.getFitness());
-        render(bestDNA);
+        renderText(population);
+        render(population.getBestDNA());
 
-        population.naturalSelection(3);
-        population.crossover();
+        animationTimer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                if (algorithmRunning) {
+                    population.naturalSelection(3);
+                    population.crossover(true);
+                    population.calculateFitness();
+                    renderText(population);
+                    render(population.getBestDNA());
+                }
+            }
 
+        };
+        animationTimer.start();
+
+    }
+
+    public void renderText(Population population) {
+        double bestFitness = population.getBestDNA().getFitness();
+        fitnessText.setText("Best fitness:  " + Util.getRoundedDouble(bestFitness, 3));
+        generationsText.setText("Generations:  " + population.getGenerations());
     }
 }

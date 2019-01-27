@@ -11,7 +11,6 @@ public class Customer implements MapObject {
     private int adjustedY;
     private int serviceDuration;
     private int demand;
-    private boolean visited;
 
     public Customer(int id, int x, int y, int serviceDuration, int demand) {
         this.id = id;
@@ -75,13 +74,5 @@ public class Customer implements MapObject {
 
     public void setAdjustedY(int adjustedY) {
         this.adjustedY = adjustedY;
-    }
-
-    public boolean isVisited() {
-        return visited;
-    }
-
-    public void setVisited(boolean visited) {
-        this.visited = visited;
     }
 }

@@ -8,7 +8,7 @@ import model.Route;
 import util.Util;
 
 import java.util.ArrayList;
-import java.util.Objects;
+import java.util.Collections;
 
 /**
  * Created by stgr99 on 23/01/2019.
@@ -19,7 +19,10 @@ public class Population {
     private ArrayList<DNA> matingPool;
     private ProblemDTO problemDTO;
     private int populationSize;
+    private int generations;
     private double mutationRate;
+    private double bestFitness = Integer.MAX_VALUE;
+    private DNA bestDNA = null;
 
     public Population(ProblemDTO problemDTO, int populationSize, double mutationRate) {
         population = new ArrayList<>();
@@ -37,6 +40,10 @@ public class Population {
         }
     }
 
+    public ArrayList<DNA> getPopulation() {
+        return this.population;
+    }
+
     public void calculateFitness() {
         for (DNA dna : population) {
             double totalFitness = 0.0;
@@ -52,8 +59,12 @@ public class Population {
                 totalFitness += calculateDistance(customers.get(customers.size() - 1), route.getEndDepot());
             }
 
+            if (totalFitness < bestFitness) {
+                bestFitness = totalFitness;
+                bestDNA = dna;
+            }
+
             dna.setFitness(totalFitness);
-//            System.out.println("Total fitness: " + totalFitness);
         }
     }
 
@@ -66,7 +77,11 @@ public class Population {
         return Math.hypot(x1 - x2, y1 - y2);
     }
 
-    public DNA getBestDNA(ArrayList<DNA> population) {
+    public DNA getBestDNA() {
+        return this.bestDNA;
+    }
+
+    private DNA getBestDNA(ArrayList<DNA> population) {
         double bestFitness = (double) Integer.MAX_VALUE;
         DNA bestDNA = null;
 
@@ -87,9 +102,10 @@ public class Population {
      */
     public void naturalSelection(int numberOfContestants) {
         matingPool.clear();
+        ArrayList<DNA> contestants = new ArrayList<>();
 
         while (matingPool.size() < populationSize) {
-            ArrayList<DNA> contestants = new ArrayList<>();
+            contestants.clear();
             for (int i = 0; i < numberOfContestants; i++) {
                 contestants.add(Util.getRandomDNA(population));
             }
@@ -97,25 +113,50 @@ public class Population {
         }
     }
 
-    public ArrayList<DNA> getPopulation() {
-        return population;
-    }
-
-    public void crossover() {
+    public void crossover(boolean mutate) {
         population.clear();
 
         while (population.size() < populationSize) {
             DNA parent1 = Util.getRandomDNA(matingPool);
             DNA parent2 = Util.getRandomDNA(matingPool);
+
             ArrayList<DNA> children = crossover(parent1, parent2);
-            population.add(children.get(0));
-            population.add(children.get(1));
+            DNA child1 = children.get(0);
+            DNA child2 = children.get(1);
+
+            if (mutate && Util.getRandomDouble(0, 1) < mutationRate) {
+                mutate(child1);
+                mutate(child2);
+            }
+
+            population.add(child1);
+            population.add(child2);
+        }
+
+        generations++;
+    }
+
+    private void mutate(DNA dna) {
+        ArrayList<Route> routes = dna.getRoutes();
+        Route randomRoute = Util.getRandomRoute(routes);
+        ArrayList<Customer> customers = randomRoute.getCustomers();
+
+        double random = Util.getRandomDouble(0, 1);
+        if (random > 0 && random < 1) {
+            inverseMutation(customers);
         }
     }
 
+    private void inverseMutation(ArrayList<Customer> customers) {
+        int start = Util.getRandomNumberInRange(0, customers.size() - 1);
+        int end = Util.getRandomNumberInRange(start, customers.size() - 1);
+        Util.reverseCustomers(customers, start, end);
+    }
+
     /**
-     * Using Partially Mapped Crossover Operator.
-     * Read more at: https://www.hindawi.com/journals/cin/2017/7430125/
+     * Using a simple crossover method which generates two children with swapped elements from its parents.
+     * <p>
+     * Read more at: https://ac.els-cdn.com/S0307904X11005105/1-s2.0-S0307904X11005105-main.pdf?_tid=aadbca2e-34da-453f-a9c0-d1e58c6540b6&acdnat=1548518875_68c60a5c9eb10e75a2d1a6f2feef56f1
      *
      * @param parent1 First parent
      * @param parent2 Second parent
@@ -123,141 +164,104 @@ public class Population {
      */
     private ArrayList<DNA> crossover(DNA parent1, DNA parent2) {
         ArrayList<DNA> children = new ArrayList<>();
-        ArrayList<Route> parent1Routes = parent1.getRoutes();
-        ArrayList<Route> parent2Routes = parent2.getRoutes();
-        ArrayList<Route> childRoutes = new ArrayList<>();
-        ArrayList<Customer> addedCustomers = new ArrayList<>();
 
-        int minRoutes = Math.min(parent1Routes.size(), parent2Routes.size());
-        int maxRoutes = Math.max(parent1Routes.size(), parent2Routes.size());
-        int numberOfRoutes = Util.getRandomNumberInRange(minRoutes, maxRoutes);
+        Route parent1Route = Util.getRandomRoute(parent1.getRoutes());
+        Route parent2Route = Util.getRandomRoute(parent2.getRoutes());
 
-        // Should consider only changing one depot, instead of everyone
-        // CHANGING ONLY ONE ROUTE:
-        numberOfRoutes = 1;
+        ArrayList<Customer> child1Customers = new ArrayList<>(parent1Route.getCustomers());
+        ArrayList<Customer> child2Customers = new ArrayList<>(parent2Route.getCustomers());
 
-        for (int i = 0; i < numberOfRoutes; i++) {
-            Route childRoute = combineRoutes(parent1Routes, parent2Routes, addedCustomers, i);
-            childRoutes.add(childRoute);
+        child1Customers = getChildCustomers(child1Customers);
+        child2Customers = getChildCustomers(child2Customers);
+
+        Route child1Route = new Route(parent1Route.getStartDepot(), parent1Route.getEndDepot(), child1Customers);
+        Route child2Route = new Route(parent2Route.getStartDepot(), parent2Route.getEndDepot(), child2Customers);
+
+        ArrayList<Route> child1Routes = new ArrayList<>();
+        ArrayList<Route> child2Routes = new ArrayList<>();
+
+        for (Route route : parent1.getRoutes()) {
+            if (route == parent1Route) {
+                child1Routes.add(child1Route);
+            } else {
+                child1Routes.add(route);
+            }
         }
 
+        for (Route route : parent2.getRoutes()) {
+            if (route == parent2Route) {
+                child2Routes.add(child2Route);
+            } else {
+                child2Routes.add(route);
+            }
+        }
+
+        children.add(new DNA(child1Routes));
+        children.add(new DNA(child2Routes));
         return children;
     }
 
-    private Route combineRoutes(ArrayList<Route> parent1Routes, ArrayList<Route> parent2Routes,
-                                ArrayList<Customer> addedCustomers, int routeNumber) {
-        Route parent1Route = null;
-        Route parent2Route = null;
+    private ArrayList<Customer> getChildCustomers(ArrayList<Customer> parentCustomers) {
+        int element1 = Util.getRandomNumberInRange(0, parentCustomers.size() - 1);
+        int element2 = Util.getRandomNumberInRange(0, parentCustomers.size() - 1);
 
-        if (parent1Routes.size() > routeNumber) {
-            parent1Route = parent1Routes.get(routeNumber);
-        }
-        if (parent2Routes.size() > routeNumber) {
-            parent2Route = parent2Routes.get(routeNumber);
-        }
+        Collections.swap(parentCustomers, element1, element2);
 
-        Depot startDepot = getStartDepot(parent1Route, parent2Route);
-        Depot endDepot = getEndDepot(parent1Route, parent2Route);
-        ArrayList<Customer> customers = getCustomers(parent1Route, parent2Route, addedCustomers);
-
-        return new Route(startDepot, endDepot, customers);
+        return parentCustomers;
     }
 
-    // TODO
-    private ArrayList<Customer> getCustomers(Route parent1Route, Route parent2Route, ArrayList<Customer> addedCustomers) {
-        ArrayList<Customer> customers = new ArrayList<>();
+    private void deleteEmptyRoutes(DNA dna) {
+        ArrayList<Route> routes = dna.getRoutes();
+        ArrayList<Route> routesToDelete = new ArrayList<>();
 
-        if (parent1Route == null) {
-            ArrayList<Customer> parent2Customers = parent2Route.getCustomers();
-            for (Customer customer : parent2Customers) {
-                if (!addedCustomers.contains(customer)) {
-                    customers.add(customer);
-                    addedCustomers.add(customer);
-                }
+        for (Route route : routes) {
+            if (route.getCustomers().size() == 0) {
+                routesToDelete.add(route);
             }
-        } else if (parent2Route == null) {
-            ArrayList<Customer> parent1Customers = parent1Route.getCustomers();
-            for (Customer customer : parent1Customers) {
-                if (!addedCustomers.contains(customer)) {
-                    customers.add(customer);
-                    addedCustomers.add(customer);
-                }
-            }
-        } else {
-            ArrayList<Customer> parent1Customers = parent1Route.getCustomers();
-            ArrayList<Customer> parent2Customers = parent2Route.getCustomers();
-            int minCustomerSize = Math.min(parent1Customers.size(), parent2Customers.size());
-
-            // If at least one route only contains 1 customer.
-            if (minCustomerSize == 1) {
-                Customer firstCustomer = parent1Customers.get(0);
-
-            }
-
-            int cutPoint1 = Util.getRandomNumberInRange(0, minCustomerSize - 1);
-            int cutPoint2 = Util.getRandomNumberInRange(cutPoint1, minCustomerSize - 1);
-
-            // P1 = [3]
-            // P3 = [2, 5, 9, 8]
-
-            //
-
-
-
-
-            // P1 = [3, 4, 7, 6]
-            // P2 = [8, 9, 3, 2, 1, 7]
-
-            // P1 = [3 | 4, 7 | 6]
-            // P2 = [8 | 9, 3 | 2, 1, 7]
-
-            // O1 = [x | 9, 3 | x]
-            // O2 = [x | 4, 7 | x, x, x]
-
-            // O1 = [x | 9, 3 | 6]
-            // O2 = [8 | 4, 7 | 2, 1, x]
-
-            // O1 = [8 | 9, 3 | 6]
-            // O2 = [8 | 4, 7 | 2, 1, 3]
-
-
         }
 
+        dna.getRoutes().removeAll(routesToDelete);
+    }
 
-        return customers;
+    // routes: [2, 3, 5] [1, 8] [7, 4, 9] [6]
+    // customersToDelete: [6, 7]
+    private void removeCustomers(ArrayList<Route> routes, ArrayList<Customer> customersToDelete) {
+        ArrayList<Customer> customersToRemove = new ArrayList<>();
+
+        for (Route route : routes) {
+            ArrayList<Customer> customers = route.getCustomers();
+            customersToRemove.clear();
+
+            for (Customer customer : customers) {
+                if (customersToDelete.contains(customer)) {
+                    customersToRemove.add(customer);
+                }
+            }
+
+            customers.removeAll(customersToRemove);
+        }
     }
 
     private Depot getStartDepot(Route parent1Route, Route parent2Route) {
         Depot startDepot;
 
-        if (parent1Route == null) {
-            startDepot = Objects.requireNonNull(parent2Route).getStartDepot();
-        } else if (parent2Route == null) {
-            startDepot = parent1Route.getStartDepot();
-        } else {
-            ArrayList<Depot> startDepots = new ArrayList<>();
-            startDepots.add(parent1Route.getStartDepot());
-            startDepots.add(parent2Route.getStartDepot());
-            startDepot = Util.getRandomDepot(startDepots);
-        }
+        ArrayList<Depot> startDepots = new ArrayList<>();
+        startDepots.add(parent1Route.getStartDepot());
+        startDepots.add(parent2Route.getStartDepot());
+        startDepot = Util.getRandomDepot(startDepots);
 
         return startDepot;
     }
 
     private Depot getEndDepot(Route parent1Route, Route parent2Route) {
-        Depot endDepot;
+        ArrayList<Depot> endDepots = new ArrayList<>();
+        endDepots.add(parent1Route.getEndDepot());
+        endDepots.add(parent2Route.getEndDepot());
 
-        if (parent1Route == null) {
-            endDepot = parent2Route.getEndDepot();
-        } else if (parent2Route == null) {
-            endDepot = parent1Route.getEndDepot();
-        } else {
-            ArrayList<Depot> endDepots = new ArrayList<>();
-            endDepots.add(parent1Route.getEndDepot());
-            endDepots.add(parent2Route.getEndDepot());
-            endDepot = Util.getRandomDepot(endDepots);
-        }
+        return Util.getRandomDepot(endDepots);
+    }
 
-        return endDepot;
+    public int getGenerations() {
+        return generations;
     }
 }

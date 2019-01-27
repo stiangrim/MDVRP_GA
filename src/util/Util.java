@@ -1,11 +1,15 @@
 package util;
 
 import ga.DNA;
+import javafx.scene.paint.Color;
 import model.Customer;
 import model.Depot;
 import model.Route;
 
 import java.io.File;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Objects;
@@ -15,6 +19,9 @@ import java.util.Random;
  * Created by stgr99 on 25/01/2019.
  */
 public class Util {
+
+    private static Random random = new Random();
+    private static DecimalFormat df = new DecimalFormat();
 
     public static ArrayList<String> getDataFiles() {
         ArrayList<String> dataFiles = new ArrayList<>();
@@ -30,12 +37,19 @@ public class Util {
         return dataFiles;
     }
 
+    public static double getRandomDouble(double min, double max) {
+        if (min > max) {
+            throw new IllegalArgumentException("Min can't be greater than max");
+        }
+
+        return min + random.nextDouble() * (max - min);
+    }
+
     public static int getRandomNumberInRange(int min, int max) {
         if (min > max) {
             throw new IllegalArgumentException("Min can't be greater than max");
         }
 
-        Random random = new Random();
         return random.nextInt((max - min) + 1) + min;
     }
 
@@ -59,6 +73,20 @@ public class Util {
         return population.get(dnaNumber);
     }
 
+    public static Color getRandomColor(int colorNumber) {
+        Color[] colors = {
+                Color.GREEN, Color.YELLOW, Color.RED, Color.HOTPINK, Color.DARKORANGE, Color.YELLOWGREEN,
+                Color.SADDLEBROWN, Color.PURPLE, Color.DEEPPINK, Color.DARKOLIVEGREEN, Color.DARKSEAGREEN,
+                Color.DARKRED, Color.INDIANRED, Color.MEDIUMVIOLETRED, Color.ORANGERED, Color.PALEVIOLETRED,
+                Color.BROWN, Color.PINK, Color.ORANGE, Color.MEDIUMPURPLE};
+
+        if (colorNumber > colors.length) {
+            return Color.color(random.nextFloat(), random.nextFloat(), random.nextFloat());
+        } else {
+            return colors[colorNumber];
+        }
+    }
+
     public static int getNumberOfCustomersOnRoute(ArrayList<Customer> customers, int maxVehicleLoad) {
         int random;
 
@@ -77,5 +105,26 @@ public class Util {
         }
 
         return random;
+    }
+
+    public static ArrayList<Customer> reverseCustomers(ArrayList<Customer> customers, int start, int end) {
+        if (start < end) {
+            ArrayList<Customer> subList = new ArrayList<>(customers.subList(start, end));
+            Collections.reverse(subList);
+
+            int n = 0;
+            for (int i = start; i < end; i++)
+            {
+                customers.set(i, subList.get(n));
+                n++;
+            }
+        }
+
+        return customers;
+    }
+
+    public static Double getRoundedDouble(double number, int decimalPlaces) {
+        BigDecimal bd = new BigDecimal(number).setScale(decimalPlaces, RoundingMode.CEILING);
+        return bd.doubleValue();
     }
 }
