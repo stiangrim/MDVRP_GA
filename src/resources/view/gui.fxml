@@ -55,7 +55,7 @@
                   <Font size="20.0" />
                </font>
             </Text>
-            <CheckBox fx:id="renderCheckbox" layoutX="39.0" layoutY="170.0" mnemonicParsing="false" text="Render all vehicles" />
+            <CheckBox fx:id="renderCheckbox" layoutX="39.0" layoutY="170.0" mnemonicParsing="false" text="Unique vehicle color" />
             </children>
         </Pane>
         <Pane layoutX="520.0" layoutY="79.0" prefHeight="52.0" prefWidth="165.0">
