@@ -324,7 +324,7 @@ public class MainController {
         if (depots != null) {
             gc.setFill(Color.DEEPSKYBLUE);
             for (Depot depot : depots) {
-                gc.fillOval(
+                gc.fillRect(
                         depot.getAdjustedX() * multiplier,
                         depot.getAdjustedY() * multiplier,
                         drawWidth,
