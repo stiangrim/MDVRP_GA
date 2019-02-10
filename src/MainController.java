@@ -1,5 +1,5 @@
 import dto.ProblemDTO;
-import ga.DNA;
+import ga.Chromosome;
 import ga.Population;
 import javafx.animation.AnimationTimer;
 import javafx.beans.value.ObservableValue;
@@ -35,6 +35,9 @@ public class MainController {
 
     @FXML
     public CheckBox optimizerCheckBox;
+
+    @FXML
+    public CheckBox renderCheckbox;
 
     @FXML
     public Button startButton;
@@ -75,7 +78,7 @@ public class MainController {
     private double multiplier = 1.0;
     private int drawWidth = 5;
     private int populationSize = 100;
-    private double mutationRate = 0.03;
+    private double mutationRate = 0.05;
     private double crossoverRate = 0.8;
     private boolean algorithmRunning = false;
     private long startTime = System.nanoTime();
@@ -144,6 +147,7 @@ public class MainController {
 
     private void onProblemSelect(String dataFile) {
         canvas.getGraphicsContext2D().clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
 
         ProblemDTO problemDTO = fileHandler.getFileInformation(dataFile);
         customers = problemDTO.getCustomers();
@@ -229,28 +233,35 @@ public class MainController {
         multiplier = 320.0 / (float) Math.max(maxX + difference, maxY + difference);
     }
 
-    private void render(DNA dna) {
+    private void render(Chromosome chromosome) {
         GraphicsContext gc = canvas.getGraphicsContext2D();
         gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         renderCustomers(gc);
         renderDepots(gc);
-        renderVehicles(gc, dna);
+        renderVehicles(gc, chromosome);
     }
 
-    private void renderVehicles(GraphicsContext gc, DNA dna) {
-        if (dna != null) {
+    private void renderVehicles(GraphicsContext gc, Chromosome chromosome) {
+        if (chromosome != null) {
             gc.setLineWidth(1);
             int colorNumber = 0;
             coloredDepots.clear();
 
-            ArrayList<Vehicle> vehicles = dna.getVehicles();
+            ArrayList<Vehicle> vehicles = chromosome.getVehicles();
             for (Vehicle vehicle : vehicles) {
                 ArrayList<Customer> customers = vehicle.getCustomers();
 
-                Color depotColor = getDepotColor(vehicle);
-                //Color randomColor = Util.getRandomColor(colorNumber++);
-                gc.setStroke(depotColor);
+
+                Color color;
+                boolean renderAll = renderCheckbox.isSelected();
+                if (renderAll) {
+                    color = Util.getRandomColor(colorNumber++);
+                } else {
+                    color = getDepotColor(vehicle);
+                }
+
+                gc.setStroke(color);
 
                 // Render a line from start depot to first customer
                 gc.strokeLine(
@@ -360,18 +371,20 @@ public class MainController {
         currentPopulation = population;
 
         renderText(population);
-        render(population.getBestDNA());
+        render(population.getBestChromosome());
 
         animationTimer = new AnimationTimer() {
             @Override
             public void handle(long now) {
                 if (algorithmRunning) {
+                    population.setMutationRate(mutationRate);
+                    population.setCrossoverRate(crossoverRate);
                     population.naturalSelection(3);
                     population.crossover(true);
                     population.calculateFitness();
                     currentPopulation = population;
                     renderText(population);
-                    render(population.getBestDNA());
+                    render(population.getBestChromosome());
                 }
             }
 
@@ -381,7 +394,7 @@ public class MainController {
     }
 
     private void renderText(Population population) {
-        double bestFitness = population.getBestDNA().getFitness();
+        double bestFitness = population.getBestChromosome().getFitness();
         double averageFitness = population.getAverageFitness();
         fitnessText.setText("Best fitness:  " + Util.getRoundedDouble(bestFitness, 3));
         averageFitnessText.setText("Average fitness:  " + Util.getRoundedDouble(averageFitness, 3));
@@ -397,21 +410,16 @@ public class MainController {
     private void produceSolutionFile() {
         try {
             PrintWriter writer = new PrintWriter(
-                    "src/resources/ga_solutions/" + choiceBox.getValue().substring(25, choiceBox.getValue().length()),
+                    "src/resources/ga_solutions/" +
+                            choiceBox.getValue().substring(25, choiceBox.getValue().length()) +
+                            ".res",
                     "UTF-8");
 
-            DNA dna = currentPopulation.getBestDNA();
-            writer.println(new BigDecimal(dna.getFitness()).setScale(2, RoundingMode.CEILING));
+            Chromosome chromosome = currentPopulation.getBestChromosome();
+            writer.println(new BigDecimal(chromosome.getFitness()).setScale(2, RoundingMode.CEILING));
 
-            ArrayList<Vehicle> vehicles = dna.getVehicles();
-
-            vehicles.sort((o1, o2) -> {
-                if (o1.getStartDepot().getId() == o2.getStartDepot().getId())
-                    return 0;
-                return o1.getStartDepot().getId() < o2.getStartDepot().getId() ? -1 : 1;
-            });
-
-            setFixedVehicleNumbersForSolutionFile(vehicles);
+            ArrayList<Vehicle> vehicles = chromosome.getVehicles();
+            setOrderForSolutionFile(vehicles);
 
             for (Vehicle vehicle : vehicles) {
                 String startDepot = Integer.toString(vehicle.getStartDepot().getId());
@@ -442,7 +450,13 @@ public class MainController {
         }
     }
 
-    private void setFixedVehicleNumbersForSolutionFile(ArrayList<Vehicle> vehicles) {
+    private void setOrderForSolutionFile(ArrayList<Vehicle> vehicles) {
+        vehicles.sort((o1, o2) -> {
+            if (o1.getStartDepot().getId() == o2.getStartDepot().getId())
+                return 0;
+            return o1.getStartDepot().getId() < o2.getStartDepot().getId() ? -1 : 1;
+        });
+
         Depot currentDepot = vehicles.get(0).getStartDepot();
         int fixedVehicleNumber = 1;
 

@@ -4,29 +4,23 @@ package model;
  * Created by stgr99 on 24/01/2019.
  */
 public interface MapObject {
-    int id = 0;
-    Integer x = 0;
-    Integer y = 0;
-    int adjustedX = 0;
-    int adjustedY = 0;
+    int getId();
 
-    public int getId();
+    void setId(int id);
 
-    public void setId(int id);
+    Integer getX();
 
-    public Integer getX();
+    void setX(Integer x);
 
-    public void setX(Integer x);
+    Integer getY();
 
-    public Integer getY();
+    void setY(Integer y);
 
-    public void setY(Integer y);
+    int getAdjustedX();
 
-    public int getAdjustedX();
+    void setAdjustedX(int adjustedX);
 
-    public void setAdjustedX(int adjustedX);
+    int getAdjustedY();
 
-    public int getAdjustedY();
-
-    public void setAdjustedY(int adjustedY);
+    void setAdjustedY(int adjustedY);
 }

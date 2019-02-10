@@ -4,22 +4,20 @@ import dto.PositionDistanceDTO;
 import dto.ProblemDTO;
 import model.Customer;
 import model.Depot;
-import model.MapObject;
 import model.Vehicle;
 import util.Util;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 
 /**
  * Created by stgr99 on 23/01/2019.
  */
 public class Population {
 
-    private ArrayList<DNA> population;
-    private ArrayList<DNA> matingPool;
-    private DNA bestDNA = null;
+    private ArrayList<Chromosome> population;
+    private ArrayList<Chromosome> matingPool;
+    private Chromosome bestChromosome = null;
     private ProblemDTO problemDTO;
 
     private boolean optimizePopulation;
@@ -50,18 +48,18 @@ public class Population {
 
     public void setPopulation() {
         for (int i = 0; i < populationSize; i++) {
-            DNA dna = new DNA(problemDTO, optimizePopulation);
-            population.add(dna);
+            Chromosome chromosome = new Chromosome(problemDTO, optimizePopulation);
+            population.add(chromosome);
             System.out.println(++solutionsCount + " / " + populationSize);
         }
     }
 
     public void calculateFitness() {
         averageFitness = 0.0;
-        for (DNA dna : population) {
+        for (Chromosome chromosome : population) {
             double totalFitness = 0.0;
 
-            ArrayList<Vehicle> vehicles = dna.getVehicles();
+            ArrayList<Vehicle> vehicles = chromosome.getVehicles();
             for (Vehicle vehicle : vehicles) {
                 double vehicleFitness = Util.calculateVehicleDistance(vehicle);
                 vehicle.setDuration(vehicleFitness);
@@ -70,32 +68,32 @@ public class Population {
 
             if (totalFitness < bestFitness) {
                 bestFitness = totalFitness;
-                bestDNA = dna;
+                bestChromosome = chromosome;
             }
 
             averageFitness += totalFitness;
 
-            dna.setFitness(totalFitness);
+            chromosome.setFitness(totalFitness);
         }
         averageFitness = averageFitness / population.size();
     }
 
-    public DNA getBestDNA() {
-        return this.bestDNA;
+    public Chromosome getBestChromosome() {
+        return this.bestChromosome;
     }
 
-    private DNA getBestDNA(ArrayList<DNA> population) {
+    private Chromosome getBestChromosome(ArrayList<Chromosome> population) {
         double bestFitness = (double) Integer.MAX_VALUE;
-        DNA bestDNA = null;
+        Chromosome bestChromosome = null;
 
-        for (DNA dna : population) {
-            if (dna.getFitness() < bestFitness) {
-                bestFitness = dna.getFitness();
-                bestDNA = dna;
+        for (Chromosome chromosome : population) {
+            if (chromosome.getFitness() < bestFitness) {
+                bestFitness = chromosome.getFitness();
+                bestChromosome = chromosome;
             }
         }
 
-        return bestDNA;
+        return bestChromosome;
     }
 
     /**
@@ -105,14 +103,14 @@ public class Population {
      */
     public void naturalSelection(int numberOfContestants) {
         matingPool.clear();
-        ArrayList<DNA> contestants = new ArrayList<>();
+        ArrayList<Chromosome> contestants = new ArrayList<>();
 
         while (matingPool.size() < populationSize) {
             contestants.clear();
             for (int i = 0; i < numberOfContestants; i++) {
-                contestants.add(Util.getRandomDNA(population));
+                contestants.add(Util.getRandomChromosome(population));
             }
-            matingPool.add(getBestDNA(contestants));
+            matingPool.add(getBestChromosome(contestants));
         }
     }
 
@@ -123,20 +121,12 @@ public class Population {
         // If population is 100 and crossover rate is 0.8, 80 children will be added to the population.
         int childrenSize = (int) (populationSize * crossoverRate);
         while (population.size() < childrenSize) {
-            DNA parent1 = Util.getRandomDNA(matingPool);
-            DNA parent2 = Util.getRandomDNA(matingPool);
+            Chromosome parent1 = Util.getRandomChromosome(matingPool);
+            Chromosome parent2 = Util.getRandomChromosome(matingPool);
 
-            ArrayList<DNA> children = crossoverV2(parent1, parent2);
-            DNA child1 = children.get(0);
-            DNA child2 = children.get(1);
-
-            if (Util.getNumberOfCustomers(child1.getVehicles()) > 360) {
-                System.out.println("Crossover1");
-            }
-
-            if (Util.getNumberOfCustomers(child2.getVehicles()) > 360) {
-                System.out.println("Crossover2");
-            }
+            ArrayList<Chromosome> children = crossover(parent1, parent2);
+            Chromosome child1 = children.get(0);
+            Chromosome child2 = children.get(1);
 
             if (mutate && Util.getRandomDouble(0, 1) < mutationRate) {
                 mutate(child1);
@@ -164,11 +154,8 @@ public class Population {
         generations++;
     }
 
-    private void mutate(DNA dna) {
-        ArrayList<Vehicle> vehicles = dna.getVehicles();
-
-        double bestOldFitness = bestDNA.getFitness();
-
+    private void mutate(Chromosome chromosome) {
+        ArrayList<Vehicle> vehicles = chromosome.getVehicles();
 
         double random = Util.getRandomDouble(0, 1);
         if (random > 0 && random <= 0.3) {
@@ -176,33 +163,9 @@ public class Population {
         } else if (random > 0.3 && random <= 0.8) {
             swapMutation(vehicles);
         } else if (random > 0.8 && random <= 0.9) {
-            reRoutingMutationV2(vehicles);
+            reRoutingMutation(vehicles);
         } else if (random > 0.9 && random <= 1) {
             reArrangeMutation(vehicles);
-        }
-
-        calculateFitness();
-        double bestNewFitness = bestDNA.getFitness();
-
-        if (bestNewFitness < bestOldFitness) {
-            if (random > 0 && random <= 0.2) {
-                System.out.println("Inverse Mutation " + (bestNewFitness - bestOldFitness));
-            } else if (random > 0.2 && random <= 0.6) {
-                System.out.println("Swap Mutation " + (bestNewFitness - bestOldFitness));
-            } else if (random > 0.6 && random <= 0.9) {
-                System.out.println("ReRouting Mutation " + (bestNewFitness - bestOldFitness));
-            } else if (random > 0.9 && random <= 1) {
-                System.out.println("ReArrange Mutation " + (bestNewFitness - bestOldFitness));
-            }
-        }
-
-
-        int customerAmount = 0;
-        for (Vehicle vehicle : vehicles) {
-            customerAmount += vehicle.getCustomers().size();
-        }
-        if (customerAmount > 360) {
-            System.out.println(customerAmount);
         }
     }
 
@@ -230,6 +193,7 @@ public class Population {
             double newDuration = Util.calculateVehicleDistance(randomVehicle);
 
             if (newDuration <= oldDuration) {
+                randomVehicle.setDuration(newDuration);
                 break;
             }
 
@@ -270,10 +234,11 @@ public class Population {
             int load1 = Util.calculateLoad(randomVehicle1, c2);
             int load2 = Util.calculateLoad(randomVehicle2, c1);
             if (load1 <= maxVehicleLoad && load2 <= maxVehicleLoad) {
-                if (maxVehicleDuration != 0) {
-                    double duration1 = Util.calculateVehicleDistance(randomVehicle1, c2, index);
-                    double duration2 = Util.calculateVehicleDistance(randomVehicle2, c1, index);
 
+                double duration1 = Util.calculateVehicleDistance(randomVehicle1, c2, index);
+                double duration2 = Util.calculateVehicleDistance(randomVehicle2, c1, index);
+
+                if (maxVehicleDuration != 0) {
                     if (duration1 <= maxVehicleDuration && duration2 <= maxVehicleDuration) {
                         validSolution = true;
                     } else {
@@ -289,6 +254,9 @@ public class Population {
                     // Keep swap
                     customers1.add(index, c2);
                     customers2.add(index, c1);
+
+                    randomVehicle1.setDuration(duration1);
+                    randomVehicle2.setDuration(duration2);
                 }
             } else {
                 // Reverse
@@ -333,6 +301,7 @@ public class Population {
                     continue;
                 }
                 vehicleCustomers.add(bestPosition, vehicleCustomer);
+                vehicle.setDuration(newDistance);
                 customersToBeRemoved.add(vehicleCustomer);
             }
 
@@ -340,7 +309,7 @@ public class Population {
     }
 
 
-    private void reRoutingMutationV2(ArrayList<Vehicle> vehicles) {
+    private void reRoutingMutation(ArrayList<Vehicle> vehicles) {
         Vehicle randomVehicle = Util.getRandomVehicle(vehicles);
         ArrayList<Customer> vehicleCustomers = randomVehicle.getCustomers();
         ArrayList<Customer> customersToRemove = new ArrayList<>();
@@ -366,6 +335,7 @@ public class Population {
 
                 vehicle.addCustomer(vehicleCustomer, bestPosition);
                 vehicle.setEndDepot(Util.getBestEndDepot(problemDTO.getDepots(), vehicle));
+                vehicle.setDuration(distance);
                 customersToRemove.add(vehicleCustomer);
                 break;
             }
@@ -375,67 +345,8 @@ public class Population {
         Util.deleteEmptyVehicles(vehicles);
     }
 
-    private ArrayList<DNA> crossoverV3(DNA parent1, DNA parent2) {
-        ArrayList<DNA> children = new ArrayList<>();
-
-        // Make two children by deep copying the parents.
-        ArrayList<Vehicle> child1Vehicles = Util.deepCopyVehicles(parent1.getVehicles());
-        ArrayList<Vehicle> child2Vehicles = Util.deepCopyVehicles(parent2.getVehicles());
-
-        // Create array lists that contains the customers to be removed from vehicle x and distributed on vehicle y
-        ArrayList<Customer> child1CustomersSliced = new ArrayList<>();
-        ArrayList<Customer> child2CustomersSliced = new ArrayList<>();
-
-        // Get two different depots
-        Depot child1Depot = Util.getRandomDepot(problemDTO.getDepots());
-        Depot child2Depot = Util.getRandomDepot(problemDTO.getDepots());
-        while (child2Depot == child1Depot) {
-            child2Depot = Util.getRandomDepot(problemDTO.getDepots());
-        }
-
-        // Add all customers that is on a vehicle with start depot on child1Depot
-        for (Vehicle child1Vehicle : child1Vehicles) {
-            if (child1Vehicle.getStartDepot() == child1Depot) {
-                child1CustomersSliced.addAll(child1Vehicle.getCustomers());
-            }
-        }
-
-        // Add all customers that is on a vehicle with start depot on child2Depot
-        for (Vehicle child2Vehicle : child2Vehicles) {
-            if (child2Vehicle.getStartDepot() == child2Depot) {
-                child2CustomersSliced.addAll(child2Vehicle.getCustomers());
-            }
-        }
-
-        // Remove the sublist of customers in child2 from child1's vehicles, and vice versa.
-        Util.removeCustomers(child1Vehicles, child2CustomersSliced);
-        Util.removeCustomers(child2Vehicles, child1CustomersSliced);
-
-        // Update end depots
-        for (Vehicle child1Vehicle : child1Vehicles) {
-            child1Vehicle.setEndDepot(Util.getBestEndDepot(problemDTO.getDepots(), child1Vehicle));
-        }
-        for (Vehicle child2Vehicle : child2Vehicles) {
-            child2Vehicle.setEndDepot(Util.getBestEndDepot(problemDTO.getDepots(), child2Vehicle));
-        }
-
-        // Distribute the sublist of customers in child2 in child1's vehicles, and vice versa.
-        distributeCustomersOnVehicles(child1Vehicles, child2CustomersSliced);
-        distributeCustomersOnVehicles(child2Vehicles, child1CustomersSliced);
-
-        // Delete every vehicle that has no customers attached.
-        Util.deleteEmptyVehicles(child1Vehicles);
-        Util.deleteEmptyVehicles(child2Vehicles);
-
-        // Add and return the children.
-        children.add(new DNA(child1Vehicles));
-        children.add(new DNA(child2Vehicles));
-
-        return children;
-    }
-
-    private ArrayList<DNA> crossoverV2(DNA parent1, DNA parent2) {
-        ArrayList<DNA> children = new ArrayList<>();
+    private ArrayList<Chromosome> crossover(Chromosome parent1, Chromosome parent2) {
+        ArrayList<Chromosome> children = new ArrayList<>();
 
         // Make two children by deep copying the parents.
         ArrayList<Vehicle> child1Vehicles = Util.deepCopyVehicles(parent1.getVehicles());
@@ -463,53 +374,9 @@ public class Population {
         }
 
         // Remove the sublist of customers in child2 from child1's vehicles, and vice versa.
-        Util.removeCustomersV2(child1Vehicles, child2CustomersSliced);
-        Util.removeCustomersV2(child2Vehicles, child1CustomersSliced);
-
-        // Distribute the sublist of customers in child2 in child1's vehicles, and vice versa.
-        int solutionFound1 = distributeCustomersOnVehicles(child1Vehicles, child2CustomersSliced);
-        int solutionFound2 = distributeCustomersOnVehicles(child2Vehicles, child1CustomersSliced);
-
-        if (solutionFound1 == -1 || solutionFound2 == -1) {
-            child1Vehicles = Util.deepCopyVehicles(parent1.getVehicles());
-            child2Vehicles = Util.deepCopyVehicles(parent2.getVehicles());
-        }
-
-        // Delete every vehicle that has no customers attached.
-        Util.deleteEmptyVehicles(child1Vehicles);
-        Util.deleteEmptyVehicles(child2Vehicles);
-
-        // Add and return the children.
-        children.add(new DNA(child1Vehicles));
-        children.add(new DNA(child2Vehicles));
-
-        return children;
-    }
-
-    private ArrayList<DNA> crossover(DNA parent1, DNA parent2) {
-        ArrayList<DNA> children = new ArrayList<>();
-
-        // Make two children by deep copying the parents.
-        ArrayList<Vehicle> child1Vehicles = Util.deepCopyVehicles(parent1.getVehicles());
-        ArrayList<Vehicle> child2Vehicles = Util.deepCopyVehicles(parent2.getVehicles());
-
-        // Select a random vehicle from both children.
-        Vehicle child1Vehicle = Util.getRandomVehicle(child1Vehicles);
-        Vehicle child2Vehicle = Util.getRandomVehicle(child2Vehicles);
-
-        // Get half of the customers as a sublist from each vehicle.
-        ArrayList<Customer> child1Customers = child1Vehicle.getCustomers();
-        ArrayList<Customer> child2Customers = child2Vehicle.getCustomers();
-        ArrayList<Customer> child1CustomersSliced = new ArrayList<>(child1Customers.subList(0, child1Customers.size() / 2));
-        ArrayList<Customer> child2CustomersSliced = new ArrayList<>(child2Customers.subList(0, child2Customers.size() / 2));
-
-        // Remove the sublist of customers in child2 from child1's vehicles, and vice versa.
         Util.removeCustomers(child1Vehicles, child2CustomersSliced);
         Util.removeCustomers(child2Vehicles, child1CustomersSliced);
 
-        child1Vehicle.setEndDepot(Util.getBestEndDepot(problemDTO.getDepots(), child1Vehicle));
-        child2Vehicle.setEndDepot(Util.getBestEndDepot(problemDTO.getDepots(), child2Vehicle));
-
         // Distribute the sublist of customers in child2 in child1's vehicles, and vice versa.
         int solutionFound1 = distributeCustomersOnVehicles(child1Vehicles, child2CustomersSliced);
         int solutionFound2 = distributeCustomersOnVehicles(child2Vehicles, child1CustomersSliced);
@@ -524,8 +391,8 @@ public class Population {
         Util.deleteEmptyVehicles(child2Vehicles);
 
         // Add and return the children.
-        children.add(new DNA(child1Vehicles));
-        children.add(new DNA(child2Vehicles));
+        children.add(new Chromosome(child1Vehicles));
+        children.add(new Chromosome(child2Vehicles));
 
         return children;
     }
@@ -537,6 +404,7 @@ public class Population {
 
         for (Customer emptyCustomer : customersToDistribute) {
             minDurationIncrease = Double.MAX_VALUE;
+            double duration = 0.0;
 
             for (Vehicle vehicle : vehicles) {
                 int load = Util.calculateLoad(vehicle, emptyCustomer);
@@ -558,24 +426,28 @@ public class Population {
                     minVehicle = vehicle;
                     bestPosition = position;
                     minDurationIncrease = durationIncrease;
+                    duration = newDuration;
                 }
             }
 
             if (minVehicle != null) {
                 minVehicle.getCustomers().add(bestPosition, emptyCustomer);
                 minVehicle.setEndDepot(Util.getBestEndDepot(problemDTO.getDepots(), minVehicle));
+                minVehicle.setDuration(duration);
             } else {
                 Depot startDepot = Util.getRandomStartDepot(problemDTO.getDepots(), vehicles);
                 if (startDepot != null) {
                     Vehicle vehicle = new Vehicle();
                     vehicle.setStartDepot(startDepot);
                     vehicle.setEndDepot(Util.getRandomDepot(problemDTO.getDepots()));
-                    vehicles.add(vehicle);
 
                     int load = Util.calculateLoad(vehicle, emptyCustomer);
                     if (load <= maxVehicleLoad) {
                         vehicle.addCustomer(emptyCustomer);
+                        vehicle.setDuration(Util.calculateVehicleDistance(vehicle, emptyCustomer));
                     }
+
+                    vehicles.add(vehicle);
                 } else {
                     System.out.println("ERROR: No more available vehicles and constraints fails.");
                     return -1;
@@ -591,5 +463,13 @@ public class Population {
 
     public double getAverageFitness() {
         return averageFitness;
+    }
+
+    public void setMutationRate(double mutationRate) {
+        this.mutationRate = mutationRate;
+    }
+
+    public void setCrossoverRate(double crossoverRate) {
+        this.crossoverRate = crossoverRate;
     }
 }

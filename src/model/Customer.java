@@ -4,9 +4,9 @@ package model;
  * Created by stgr99 on 22/01/2019.
  */
 public class Customer implements MapObject {
-    private int id;
     private Integer x;
     private Integer y;
+    private int id;
     private int adjustedX;
     private int adjustedY;
     private int serviceDuration;

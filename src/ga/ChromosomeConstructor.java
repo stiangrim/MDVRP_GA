@@ -14,7 +14,7 @@ import java.util.Collections;
 /**
  * Created by stgr99 on 26/01/2019.
  */
-class DNAConstructor {
+class ChromosomeConstructor {
     private ProblemDTO dto;
     private ArrayList<Depot> depots;
     private ArrayList<Customer> customers;
@@ -26,7 +26,7 @@ class DNAConstructor {
     private double maxVehicleDuration;
     private boolean optimizePopulation;
 
-    DNAConstructor(ProblemDTO dto, boolean optimizePopulation) {
+    ChromosomeConstructor(ProblemDTO dto, boolean optimizePopulation) {
         this.dto = dto;
         this.optimizePopulation = optimizePopulation;
         depots = new ArrayList<>(dto.getDepots());
@@ -72,15 +72,15 @@ class DNAConstructor {
 
     private boolean addOptimizedCustomers(ArrayList<Vehicle> vehicles) {
         int failCount = 0;
-        boolean triedToFixDNA = false;
+        boolean triedToFixChromosome = false;
 
         while (customers.size() > 0) {
 
             if (failCount > 1000) {
                 return false;
-            } else if (failCount > 500 && !triedToFixDNA) {
-                fixDNA(vehicles);
-                triedToFixDNA = true;
+            } else if (failCount > 500 && !triedToFixChromosome) {
+                fixChromosome(vehicles);
+                triedToFixChromosome = true;
             }
 
             Vehicle randomVehicle = Util.getRandomVehicle(vehicles);
@@ -104,17 +104,14 @@ class DNAConstructor {
             randomVehicle.addCustomer(closestCustomer, bestPosition);
             randomVehicle.setEndDepot(Util.getBestEndDepot(depots, randomVehicle));
             randomVehicle.setLoad(vehicleLoad);
+            randomVehicle.setDuration(distance);
             customers.remove(closestCustomer);
         }
 
         return true;
     }
 
-    private void fixDNA(ArrayList<Vehicle> vehicles) {
-        if (Util.getNumberOfCustomers(vehicles) > 360) {
-            System.out.println("0");
-        }
-
+    private void fixChromosome(ArrayList<Vehicle> vehicles) {
         // Fill some vehicles with customers, if they have space for it.
         ArrayList<Integer> vehicleNumberGivers = new ArrayList<>();
         for (Vehicle vehicle : vehicles) {
@@ -122,36 +119,34 @@ class DNAConstructor {
                 continue;
             }
 
-            double duration = Util.calculateVehicleDistance(vehicle);
             ArrayList<Customer> customers = vehicle.getCustomers();
 
-            if (duration <= maxVehicleDuration) {
-                for (Vehicle otherVehicle : vehicles) {
-                    if (otherVehicle == vehicle) {
-                        continue;
-                    }
-
-                    ArrayList<Customer> otherCustomers = otherVehicle.getCustomers();
-                    ArrayList<Customer> toBeRemoved = new ArrayList<>();
-                    for (Customer otherCustomer : otherCustomers) {
-                        PositionDistanceDTO dto = Util.getBestPositionOnVehicle(vehicle, otherCustomer);
-                        int bestPosition = dto.getPosition();
-                        double newDuration = dto.getDistance();
-                        int load = Util.calculateLoad(vehicle, otherCustomer);
-
-                        if (newDuration <= maxVehicleDuration && load <= maxVehicleLoad) {
-                            vehicleNumberGivers.add(otherVehicle.getVehicleNumber());
-                            customers.add(bestPosition, otherCustomer);
-                            toBeRemoved.add(otherCustomer);
-                        }
-                    }
-                    otherCustomers.removeAll(toBeRemoved);
+            for (Vehicle otherVehicle : vehicles) {
+                if (otherVehicle == vehicle) {
+                    continue;
                 }
-            }
-        }
 
-        if (Util.getNumberOfCustomers(vehicles) > 360) {
-            System.out.println("1");
+                ArrayList<Customer> otherCustomers = otherVehicle.getCustomers();
+                ArrayList<Customer> toBeRemoved = new ArrayList<>();
+
+                for (Customer otherCustomer : otherCustomers) {
+                    PositionDistanceDTO dto = Util.getBestPositionOnVehicle(vehicle, otherCustomer);
+                    int bestPosition = dto.getPosition();
+                    double newDuration = dto.getDistance();
+                    int load = Util.calculateLoad(vehicle, otherCustomer);
+
+                    if (newDuration <= maxVehicleDuration && load <= maxVehicleLoad) {
+                        vehicleNumberGivers.add(otherVehicle.getVehicleNumber());
+                        customers.add(bestPosition, otherCustomer);
+                        vehicle.setDuration(newDuration);
+                        vehicle.setLoad(load);
+                        toBeRemoved.add(otherCustomer);
+                    }
+                }
+
+                otherCustomers.removeAll(toBeRemoved);
+            }
+
         }
 
         // Set last customer first, if it makes fitness better.
@@ -173,10 +168,6 @@ class DNAConstructor {
             }
         }
 
-        if (Util.getNumberOfCustomers(vehicles) > 360) {
-            System.out.println("2");
-        }
-
         // Check if customers overlaps vehicles, and can be rearranged.
         for (Vehicle vehicle : vehicles) {
             ArrayList<Customer> vehicleCustomers = vehicle.getCustomers();
@@ -188,10 +179,6 @@ class DNAConstructor {
             vehicleCustomers.removeAll(customersToBeRemoved);
         }
         Util.deleteEmptyVehicles(vehicles);
-
-        if (Util.getNumberOfCustomers(vehicles) > 360) {
-            System.out.println("3");
-        }
 
         // Swap mutation
         for (Vehicle vehicle : vehicles) {
@@ -208,6 +195,8 @@ class DNAConstructor {
 
                     if (newDistance >= oldDistance) {
                         Collections.swap(customers, element1, element2);
+                    } else {
+                        vehicle.setDuration(newDistance);
                     }
                 }
             }
@@ -228,6 +217,8 @@ class DNAConstructor {
 
                     if (newDistance >= oldDistance) {
                         Util.reverseCustomers(customers, start, end);
+                    } else {
+                        vehicle.setDuration(newDistance);
                     }
                 }
             }
@@ -252,6 +243,7 @@ class DNAConstructor {
                     continue;
                 }
                 vehicleCustomers.add(bestPosition, vehicleCustomer);
+                vehicle.setDuration(newDistance);
                 customersToBeRemoved.add(vehicleCustomer);
             }
 
@@ -304,7 +296,9 @@ class DNAConstructor {
                     continue;
                 }
 
+                double duration = Util.calculateVehicleDistance(vehicle, randomCustomer);
                 vehicle.addCustomer(randomCustomer);
+                vehicle.setDuration(duration);
                 customers.remove(randomCustomer);
                 vehicleFound = true;
                 break;

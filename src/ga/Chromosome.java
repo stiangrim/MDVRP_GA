@@ -8,18 +8,20 @@ import java.util.ArrayList;
 /**
  * Created by stgr99 on 23/01/2019.
  */
-public class DNA {
+public class Chromosome {
 
-    // The list of vehicles represents the gene/chromosome of the DNA.
+    // The list of vehicles represents the genes of the chromosome.
     private ArrayList<Vehicle> vehicles;
+
+    // The total distance of all vehicles, represents the fitness value.
     private double fitness;
 
-    DNA(ArrayList<Vehicle> vehicles) {
+    Chromosome(ArrayList<Vehicle> vehicles) {
         this.vehicles = vehicles;
     }
 
-    DNA(ProblemDTO dto, boolean optimizePopulation) {
-        this.vehicles = new DNAConstructor(dto, optimizePopulation).getVehicles();
+    Chromosome(ProblemDTO dto, boolean optimizePopulation) {
+        this.vehicles = new ChromosomeConstructor(dto, optimizePopulation).getVehicles();
     }
 
     public double getFitness() {

@@ -7,12 +7,14 @@ import java.util.ArrayList;
  */
 public class Vehicle {
 
-    private int vehicleNumber;
-    private double duration = 0.0;
-    private int load = 0;
     private Depot startDepot;
     private Depot endDepot;
     private ArrayList<Customer> customers;
+
+    private int vehicleNumber;
+    private int load = 0;
+    private double duration = 0.0;
+
 
     public Vehicle() {
         customers = new ArrayList<>();
@@ -23,12 +25,6 @@ public class Vehicle {
         this.endDepot = endDepot;
         this.vehicleNumber = vehicleNumber;
         this.customers = new ArrayList<>();
-    }
-
-    public Vehicle(Depot startDepot, Depot endDepot, ArrayList<Customer> customers) {
-        this.startDepot = startDepot;
-        this.endDepot = endDepot;
-        this.customers = customers;
     }
 
     public Vehicle(Depot startDepot, Depot endDepot, ArrayList<Customer> customers, int vehicleNumber) {

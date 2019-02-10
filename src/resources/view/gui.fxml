@@ -40,12 +40,12 @@
                         <Font size="20.0" />
                     </font>
                 </Text>
-                <Text fx:id="generationsText" layoutX="39.0" layoutY="140.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Generations:">
+                <Text fx:id="generationsText" layoutX="39.0" layoutY="105.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Generations:">
                     <font>
                         <Font size="20.0" />
                     </font>
                 </Text>
-            <Text fx:id="timeText" layoutX="40.0" layoutY="175.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Time spent: ">
+            <Text fx:id="timeText" layoutX="40.0" layoutY="135.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Time spent: ">
                <font>
                   <Font size="20.0" />
                </font>
@@ -55,6 +55,7 @@
                   <Font size="20.0" />
                </font>
             </Text>
+            <CheckBox fx:id="renderCheckbox" layoutX="39.0" layoutY="170.0" mnemonicParsing="false" text="Render all vehicles" />
             </children>
         </Pane>
         <Pane layoutX="520.0" layoutY="79.0" prefHeight="52.0" prefWidth="165.0">

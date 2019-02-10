@@ -2,7 +2,7 @@ package util;
 
 import dto.CustomerDistanceDTO;
 import dto.PositionDistanceDTO;
-import ga.DNA;
+import ga.Chromosome;
 import javafx.scene.paint.Color;
 import model.Customer;
 import model.Depot;
@@ -66,12 +66,11 @@ public class Util {
         return vehicles.get(vehicleNumber);
     }
 
-    public static DNA getRandomDNA(ArrayList<DNA> population) {
-        int dnaNumber = getRandomNumberInRange(0, population.size() - 1);
-        return population.get(dnaNumber);
+    public static Chromosome getRandomChromosome(ArrayList<Chromosome> population) {
+        int chromosomeNumber = getRandomNumberInRange(0, population.size() - 1);
+        return population.get(chromosomeNumber);
     }
 
-    // TODO: Hvert DEPOT skal ha en color
     public static Color getRandomColor(int colorNumber) {
         Color[] colors = {
                 Color.GREEN, Color.YELLOW, Color.RED, Color.HOTPINK, Color.DARKORANGE, Color.BLUE,
@@ -258,7 +257,7 @@ public class Util {
         return new PositionDistanceDTO(bestVehiclePosition, bestVehicleDistance);
     }
 
-    public static Depot getClosestDepot(ArrayList<Depot> depots, MapObject mapObject) {
+    private static Depot getClosestDepot(ArrayList<Depot> depots, MapObject mapObject) {
         Depot closestDepot = null;
         double minDistance = Double.MAX_VALUE;
 
@@ -309,38 +308,6 @@ public class Util {
         return duration;
     }
 
-    public static ArrayList<Customer> getCustomersFromVehicles(ArrayList<Vehicle> vehicles) {
-        ArrayList<Customer> customers = new ArrayList<>();
-        for (Vehicle vehicle : vehicles) {
-            customers.addAll(vehicle.getCustomers());
-        }
-        return customers;
-    }
-
-    public static void removeCustomersV2(ArrayList<Vehicle> vehicles, ArrayList<Customer> customersToDelete) {
-        if (customersToDelete.size() > 0) {
-
-            for (Customer customerToDelete : customersToDelete) {
-
-                outerLoop:
-                for (Vehicle vehicle : vehicles) {
-                    ArrayList<Customer> vehicleCustomers = vehicle.getCustomers();
-
-                    for (Customer vehicleCustomer : vehicleCustomers) {
-
-                        if (customerToDelete.getId() == vehicleCustomer.getId()) {
-                            vehicleCustomers.remove(vehicleCustomer);
-                            break outerLoop;
-                        }
-
-                    }
-                }
-
-            }
-
-        }
-    }
-
     public static void removeCustomers(ArrayList<Vehicle> vehicles, ArrayList<Customer> customersToDelete) {
         if (customersToDelete.size() > 0) {
             ArrayList<Customer> customersToRemove = new ArrayList<>();
@@ -371,26 +338,6 @@ public class Util {
         }
     }
 
-    public static int getNumberOfCustomersOnVehicle(ArrayList<Customer> customers, int maxVehicleLoad) {
-        int random;
-
-        if (customers.size() == 0) {
-            return 0;
-        }
-
-        if (customers.size() < maxVehicleLoad) {
-            random = getRandomNumberInRange(1, customers.size());
-        } else {
-            random = getRandomNumberInRange(1, maxVehicleLoad);
-        }
-
-        if (random > customers.size()) {
-            random = customers.size();
-        }
-
-        return random;
-    }
-
     public static Depot getRandomStartDepot(ArrayList<Depot> depots, ArrayList<Vehicle> vehicles) {
         if (vehicles.size() == 0) {
             return Util.getRandomDepot(depots);
@@ -414,13 +361,5 @@ public class Util {
             }
         }
         return startDepot;
-    }
-
-    public static int getNumberOfCustomers(ArrayList<Vehicle> vehicles) {
-        int count = 0;
-        for (Vehicle vehicle : vehicles) {
-            count += vehicle.getCustomers().size();
-        }
-        return count;
     }
 }

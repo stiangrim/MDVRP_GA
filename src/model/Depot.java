@@ -1,39 +1,22 @@
 package model;
 
-import java.util.ArrayList;
-
 /**
  * Created by stgr99 on 22/01/2019.
  */
 public class Depot implements MapObject {
-    private int id;
-    private double maxVehicleDuration;
-    private int maxVehicleLoad;
-    private int vehiclesUsed = 0;
-    private int maxVehicles;
-    private int adjustedX;
-    private int adjustedY;
     private Integer x;
     private Integer y;
-    private ArrayList<Vehicle> vehicles;
+    private int id;
+    private int adjustedX;
+    private int adjustedY;
+    private int maxVehicleLoad;
+    private int maxVehicles;
+    private double maxVehicleDuration;
 
     public Depot(int maxVehicleDuration, int maxVehicleLoad, int maxVehicles) {
         this.maxVehicleDuration = maxVehicleDuration;
         this.maxVehicleLoad = maxVehicleLoad;
         this.maxVehicles = maxVehicles;
-        this.vehicles = new ArrayList<>();
-    }
-
-    public ArrayList<Vehicle> getVehicles() {
-        return vehicles;
-    }
-
-    public void setVehicles(ArrayList<Vehicle> vehicles) {
-        this.vehicles = vehicles;
-    }
-
-    public void addVehicle(Vehicle vehicle) {
-        this.vehicles.add(vehicle);
     }
 
     public double getMaxVehicleDuration() {
@@ -90,14 +73,6 @@ public class Depot implements MapObject {
 
     public Integer getY() {
         return y;
-    }
-
-    public int getVehiclesUsed() {
-        return vehiclesUsed;
-    }
-
-    public void setVehiclesUsed(int vehiclesUsed) {
-        this.vehiclesUsed = vehiclesUsed;
     }
 
     public int getId() {

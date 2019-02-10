@@ -24,6 +24,7 @@ public class FileHandler {
     private ArrayList<Depot> depots;
 
     public ProblemDTO getFileInformation(String filePath) {
+        fixedDepotId = 1;
         customers = new ArrayList<>();
         depots = new ArrayList<>();
 
@@ -98,13 +99,12 @@ public class FileHandler {
     private void setDepotInformation(String line) {
         String[] variables = line.split("\\s+");
 
-        int id = fixedDepotId;
         int x = Integer.parseInt(variables[1]);
         int y = Integer.parseInt(variables[2]);
 
         for (Depot list : depots) {
             if (list.getX() == null) {
-                list.setId(id);
+                list.setId(fixedDepotId);
                 list.setX(x);
                 list.setY(y);
                 break;
