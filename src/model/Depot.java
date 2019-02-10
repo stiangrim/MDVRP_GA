@@ -1,11 +1,13 @@
 package model;
 
+import java.util.ArrayList;
+
 /**
  * Created by stgr99 on 22/01/2019.
  */
 public class Depot implements MapObject {
     private int id;
-    private int maxRouteDuration;
+    private double maxVehicleDuration;
     private int maxVehicleLoad;
     private int vehiclesUsed = 0;
     private int maxVehicles;
@@ -13,26 +15,33 @@ public class Depot implements MapObject {
     private int adjustedY;
     private Integer x;
     private Integer y;
+    private ArrayList<Vehicle> vehicles;
 
-    public Depot(int maxRouteDuration, int maxVehicleLoad, int x, int y) {
-        this.maxRouteDuration = maxRouteDuration;
-        this.maxVehicleLoad = maxVehicleLoad;
-        this.x = x;
-        this.y = y;
-    }
-
-    public Depot(int maxRouteDuration, int maxVehicleLoad, int maxVehicles) {
-        this.maxRouteDuration = maxRouteDuration;
+    public Depot(int maxVehicleDuration, int maxVehicleLoad, int maxVehicles) {
+        this.maxVehicleDuration = maxVehicleDuration;
         this.maxVehicleLoad = maxVehicleLoad;
         this.maxVehicles = maxVehicles;
+        this.vehicles = new ArrayList<>();
     }
 
-    public int getMaxRouteDuration() {
-        return maxRouteDuration;
+    public ArrayList<Vehicle> getVehicles() {
+        return vehicles;
     }
 
-    public void setMaxRouteDuration(int maxRouteDuration) {
-        this.maxRouteDuration = maxRouteDuration;
+    public void setVehicles(ArrayList<Vehicle> vehicles) {
+        this.vehicles = vehicles;
+    }
+
+    public void addVehicle(Vehicle vehicle) {
+        this.vehicles.add(vehicle);
+    }
+
+    public double getMaxVehicleDuration() {
+        return maxVehicleDuration;
+    }
+
+    public void setMaxVehicleDuration(double maxVehicleDuration) {
+        this.maxVehicleDuration = maxVehicleDuration;
     }
 
     public int getMaxVehicleLoad() {

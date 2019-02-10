@@ -1,29 +1,40 @@
 import dto.ProblemDTO;
 import ga.DNA;
 import ga.Population;
+import javafx.animation.AnimationTimer;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
-import javafx.animation.AnimationTimer;
 import javafx.scene.control.TextField;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import model.Customer;
 import model.Depot;
-import model.Route;
+import model.Vehicle;
 import util.FileHandler;
 import util.Util;
 
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by stgr99 on 22/01/2019.
  */
 public class MainController {
+
+    @FXML
+    public CheckBox optimizerCheckBox;
 
     @FXML
     public Button startButton;
@@ -41,24 +52,38 @@ public class MainController {
     public TextField mutationRateField;
 
     @FXML
+    public TextField crossoverRateField;
+
+    @FXML
+    public Text averageFitnessText;
+
+    @FXML
     public Text fitnessText;
 
     @FXML
     public Text generationsText;
 
+    @FXML
+    public Text timeText;
+
     private AnimationTimer animationTimer;
     private FileHandler fileHandler;
+    private Population currentPopulation;
     private ArrayList<Customer> customers;
     private ArrayList<Depot> depots;
+    private ArrayList<Depot> coloredDepots;
     private double multiplier = 1.0;
     private int drawWidth = 5;
     private int populationSize = 100;
-    private double mutationRate = 0.01;
+    private double mutationRate = 0.03;
+    private double crossoverRate = 0.8;
     private boolean algorithmRunning = false;
+    private long startTime = System.nanoTime();
 
     @FXML
     public void initialize() {
         fileHandler = new FileHandler();
+        coloredDepots = new ArrayList<>();
         setFXMLVariables();
         setProblems();
     }
@@ -67,13 +92,39 @@ public class MainController {
         populationSizeField.setPromptText(Integer.toString(populationSize));
         populationSizeField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue.equals("")) {
-                populationSize = Integer.parseInt(newValue);
+                try {
+                    populationSize = Integer.parseInt(newValue);
+                } catch (NumberFormatException e) {
+                    populationSizeField.setText(oldValue);
+                }
             }
         });
         mutationRateField.setPromptText(Double.toString(mutationRate));
         mutationRateField.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (!newValue.equals("")) {
+            if (newValue.equals("")) {
+                mutationRate = 0.01;
+            } else if (newValue.matches("[-+]?[0-9]*\\.?[0-9]*")) {
                 mutationRate = Double.parseDouble(newValue);
+                if (mutationRate > 1) {
+                    mutationRate = 1;
+                    mutationRateField.setText(Double.toString(mutationRate));
+                }
+            } else {
+                mutationRateField.setText(Double.toString(mutationRate));
+            }
+        });
+        crossoverRateField.setPromptText(Double.toString(crossoverRate));
+        crossoverRateField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue.equals("")) {
+                crossoverRate = 0.08;
+            } else if (newValue.matches("[-+]?[0-9]*\\.?[0-9]*")) {
+                crossoverRate = Double.parseDouble(newValue);
+                if (crossoverRate > 1) {
+                    crossoverRate = 1;
+                    crossoverRateField.setText(Double.toString(crossoverRate));
+                }
+            } else {
+                crossoverRateField.setText(Double.toString(crossoverRate));
             }
         });
     }
@@ -98,6 +149,12 @@ public class MainController {
         customers = problemDTO.getCustomers();
         depots = problemDTO.getDepots();
 
+        if (depots.get(0).getMaxVehicleDuration() != 0) {
+            optimizerCheckBox.setSelected(true);
+        } else {
+            optimizerCheckBox.setSelected(false);
+        }
+
         setAdjustedCoordinates();
         render(null);
     }
@@ -107,7 +164,7 @@ public class MainController {
      * so that the minimum x or y value starts in 0.
      * <p>
      * This is done because the problem files have both negative and positive coordinates,
-     * which causes problems when drawing objects on a JavaFX canvas.
+     * which causes problems when drawing objects on a JavaFX canvas where the min value is  (0, 0).
      */
     private void setAdjustedCoordinates() {
         int minX = Integer.MAX_VALUE;
@@ -178,24 +235,27 @@ public class MainController {
 
         renderCustomers(gc);
         renderDepots(gc);
-        renderRoute(gc, dna);
+        renderVehicles(gc, dna);
     }
 
-    private void renderRoute(GraphicsContext gc, DNA dna) {
+    private void renderVehicles(GraphicsContext gc, DNA dna) {
         if (dna != null) {
             gc.setLineWidth(1);
             int colorNumber = 0;
+            coloredDepots.clear();
 
-            ArrayList<Route> routes = dna.getRoutes();
-            for (Route route : routes) {
-                ArrayList<Customer> customers = route.getCustomers();
+            ArrayList<Vehicle> vehicles = dna.getVehicles();
+            for (Vehicle vehicle : vehicles) {
+                ArrayList<Customer> customers = vehicle.getCustomers();
 
-                gc.setStroke(Util.getRandomColor(colorNumber++));
+                Color depotColor = getDepotColor(vehicle);
+                //Color randomColor = Util.getRandomColor(colorNumber++);
+                gc.setStroke(depotColor);
 
                 // Render a line from start depot to first customer
                 gc.strokeLine(
-                        route.getStartDepot().getAdjustedX() * multiplier + (drawWidth / 2),
-                        route.getStartDepot().getAdjustedY() * multiplier + (drawWidth / 2),
+                        vehicle.getStartDepot().getAdjustedX() * multiplier + (drawWidth / 2),
+                        vehicle.getStartDepot().getAdjustedY() * multiplier + (drawWidth / 2),
                         customers.get(0).getAdjustedX() * multiplier + (drawWidth / 2),
                         customers.get(0).getAdjustedY() * multiplier + (drawWidth / 2)
                 );
@@ -214,13 +274,26 @@ public class MainController {
                 gc.strokeLine(
                         customers.get(customers.size() - 1).getAdjustedX() * multiplier + (drawWidth / 2),
                         customers.get(customers.size() - 1).getAdjustedY() * multiplier + (drawWidth / 2),
-                        route.getEndDepot().getAdjustedX() * multiplier + (drawWidth / 2),
-                        route.getEndDepot().getAdjustedY() * multiplier + (drawWidth / 2)
+                        vehicle.getEndDepot().getAdjustedX() * multiplier + (drawWidth / 2),
+                        vehicle.getEndDepot().getAdjustedY() * multiplier + (drawWidth / 2)
                 );
 
 
             }
         }
+    }
+
+    private Color getDepotColor(Vehicle vehicle) {
+        Depot startDepot = vehicle.getStartDepot();
+
+        for (int i = 0; i < coloredDepots.size(); i++) {
+            if (coloredDepots.get(i) == startDepot) {
+                return Util.getRandomColor(i);
+            }
+        }
+
+        coloredDepots.add(startDepot);
+        return Util.getRandomColor(coloredDepots.size() - 1);
     }
 
     private void renderCustomers(GraphicsContext gc) {
@@ -264,15 +337,27 @@ public class MainController {
         algorithmRunning = !algorithmRunning;
         changeStartButton();
         if (!algorithmRunning) {
-            animationTimer.stop();
+            if (animationTimer != null) {
+                animationTimer.stop();
+            }
+            optimizerCheckBox.setDisable(false);
+            produceSolutionFile();
             return;
         }
 
-        ProblemDTO problemDTO = new ProblemDTO(customers, depots);
-        Population population = new Population(problemDTO, populationSize, mutationRate);
+        fitnessText.setText("Best fitness: ");
+        generationsText.setText("Generations: ");
+        timeText.setText("Time spent: ");
 
+        startTime = System.nanoTime();
+        boolean optimizePopulation = optimizerCheckBox.isSelected();
+        optimizerCheckBox.setDisable(true);
+
+        ProblemDTO problemDTO = new ProblemDTO(customers, depots);
+        Population population = new Population(problemDTO, populationSize, mutationRate, crossoverRate, optimizePopulation);
         population.setPopulation();
         population.calculateFitness();
+        currentPopulation = population;
 
         renderText(population);
         render(population.getBestDNA());
@@ -284,6 +369,7 @@ public class MainController {
                     population.naturalSelection(3);
                     population.crossover(true);
                     population.calculateFitness();
+                    currentPopulation = population;
                     renderText(population);
                     render(population.getBestDNA());
                 }
@@ -294,9 +380,79 @@ public class MainController {
 
     }
 
-    public void renderText(Population population) {
+    private void renderText(Population population) {
         double bestFitness = population.getBestDNA().getFitness();
+        double averageFitness = population.getAverageFitness();
         fitnessText.setText("Best fitness:  " + Util.getRoundedDouble(bestFitness, 3));
+        averageFitnessText.setText("Average fitness:  " + Util.getRoundedDouble(averageFitness, 3));
         generationsText.setText("Generations:  " + population.getGenerations());
+
+        long currentTime = System.nanoTime();
+        long nanoTimeElapsed = currentTime - startTime;
+        long secondsElapsed = TimeUnit.SECONDS.convert(nanoTimeElapsed, TimeUnit.NANOSECONDS);
+
+        timeText.setText("Time spent: " + LocalTime.MIN.plusSeconds(secondsElapsed).toString());
+    }
+
+    private void produceSolutionFile() {
+        try {
+            PrintWriter writer = new PrintWriter(
+                    "src/resources/ga_solutions/" + choiceBox.getValue().substring(25, choiceBox.getValue().length()),
+                    "UTF-8");
+
+            DNA dna = currentPopulation.getBestDNA();
+            writer.println(new BigDecimal(dna.getFitness()).setScale(2, RoundingMode.CEILING));
+
+            ArrayList<Vehicle> vehicles = dna.getVehicles();
+
+            vehicles.sort((o1, o2) -> {
+                if (o1.getStartDepot().getId() == o2.getStartDepot().getId())
+                    return 0;
+                return o1.getStartDepot().getId() < o2.getStartDepot().getId() ? -1 : 1;
+            });
+
+            setFixedVehicleNumbersForSolutionFile(vehicles);
+
+            for (Vehicle vehicle : vehicles) {
+                String startDepot = Integer.toString(vehicle.getStartDepot().getId());
+                writer.print(Util.leftPad(startDepot, 2, ' ') + "  ");
+
+                String vehicleNumber = Integer.toString(vehicle.getVehicleNumber());
+                writer.print(Util.leftPad(vehicleNumber, 2, ' ') + "  ");
+
+                String duration = Double.toString(Util.getRoundedDouble(vehicle.getDuration(), 2));
+                writer.print(Util.leftPad(duration, 7, ' ') + "  ");
+
+                String customerSize = Integer.toString(vehicle.getCustomers().size());
+                writer.print(Util.leftPad(customerSize, 2, ' ') + "  ");
+
+                String endDepot = Integer.toString(vehicle.getEndDepot().getId());
+                writer.print(Util.leftPad(endDepot, 2, ' ') + "  ");
+
+                ArrayList<Customer> customers = vehicle.getCustomers();
+                for (Customer customer : customers) {
+                    writer.print(" " + customer.getId());
+                }
+                writer.println();
+            }
+
+            writer.close();
+        } catch (FileNotFoundException | UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void setFixedVehicleNumbersForSolutionFile(ArrayList<Vehicle> vehicles) {
+        Depot currentDepot = vehicles.get(0).getStartDepot();
+        int fixedVehicleNumber = 1;
+
+        for (Vehicle vehicle : vehicles) {
+            Depot startDepot = vehicle.getStartDepot();
+            if (startDepot != currentDepot) {
+                currentDepot = startDepot;
+                fixedVehicleNumber = 1;
+            }
+            vehicle.setVehicleNumber(fixedVehicleNumber++);
+        }
     }
 }

@@ -1,7 +1,7 @@
 package ga;
 
 import dto.ProblemDTO;
-import model.Route;
+import model.Vehicle;
 
 import java.util.ArrayList;
 
@@ -10,16 +10,16 @@ import java.util.ArrayList;
  */
 public class DNA {
 
-    // The list of routes represents the gene/chromosome of the DNA.
-    private ArrayList<Route> routes;
+    // The list of vehicles represents the gene/chromosome of the DNA.
+    private ArrayList<Vehicle> vehicles;
     private double fitness;
 
-    DNA(ArrayList<Route> routes) {
-        this.routes = routes;
+    DNA(ArrayList<Vehicle> vehicles) {
+        this.vehicles = vehicles;
     }
 
-    DNA(ProblemDTO dto) {
-        this.routes = new DNAConstructor(dto).getRoutes();
+    DNA(ProblemDTO dto, boolean optimizePopulation) {
+        this.vehicles = new DNAConstructor(dto, optimizePopulation).getVehicles();
     }
 
     public double getFitness() {
@@ -30,7 +30,7 @@ public class DNA {
         this.fitness = fitness;
     }
 
-    public ArrayList<Route> getRoutes() {
-        return routes;
+    public ArrayList<Vehicle> getVehicles() {
+        return vehicles;
     }
 }

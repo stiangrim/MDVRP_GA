@@ -18,6 +18,7 @@ public class FileHandler {
     private int maxVehicles = 0;
     private int numberOfCustomers = 0;
     private int numberOfDepots = 0;
+    private int fixedDepotId = 1;
 
     private ArrayList<Customer> customers;
     private ArrayList<Depot> depots;
@@ -36,9 +37,9 @@ public class FileHandler {
                     setVariables(line);
                 }
 
-                // model.Route information
+                // model.Vehicle information
                 else if (i > 0 && i < numberOfDepots + 1) {
-                    setRouteInformation(line);
+                    setVehicleInformation(line);
                 }
 
                 // model.Customer information
@@ -66,7 +67,7 @@ public class FileHandler {
         numberOfDepots = Integer.parseInt(variables[2]);
     }
 
-    private void setRouteInformation(String line) {
+    private void setVehicleInformation(String line) {
         String[] variables = line.split("\\s+");
 
         int maxDuration = Integer.parseInt(variables[0]);
@@ -97,7 +98,7 @@ public class FileHandler {
     private void setDepotInformation(String line) {
         String[] variables = line.split("\\s+");
 
-        int id = Integer.parseInt(variables[0]);
+        int id = fixedDepotId;
         int x = Integer.parseInt(variables[1]);
         int y = Integer.parseInt(variables[2]);
 
@@ -109,5 +110,7 @@ public class FileHandler {
                 break;
             }
         }
+
+        fixedDepotId++;
     }
 }
